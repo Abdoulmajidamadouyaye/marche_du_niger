@@ -15,19 +15,19 @@ async function bootstrap(): Promise<void> {
   const adminPassword = configService.get<string>('ADMIN_PASSWORD');
 
   if (!clientUrl) {
-    throw new Error('CLIENT_URL environment variable is required');
+    console.warn('[config] CLIENT_URL is not set. Only localhost origins are allowed for now.');
   }
 
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET environment variable is required');
+    console.warn('[config] JWT_SECRET is not set. Falling back to default secret.');
   }
 
   if (!adminEmail || !adminPassword) {
-    throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required');
+    console.warn('[config] ADMIN_EMAIL or ADMIN_PASSWORD is not set. Admin login will fail until configured.');
   }
 
   const localOrigins = ['http://localhost:3000', 'http://localhost:3001'];
-  const allowedOrigins = Array.from(new Set([clientUrl, ...localOrigins]));
+  const allowedOrigins = Array.from(new Set([...(clientUrl ? [clientUrl] : []), ...localOrigins]));
 
   app.use(json({ limit: '5mb' }));
   app.use(urlencoded({ extended: true, limit: '5mb' }));

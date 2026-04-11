@@ -12,10 +12,10 @@ import { CustomerAuthGuard } from './guards/customer-auth.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const jwtSecret = configService.get<string>('JWT_SECRET');
-        if (!jwtSecret) {
-          throw new Error('JWT_SECRET environment variable is required');
-        }
+        const jwtSecret = configService.get<string>(
+          'JWT_SECRET',
+          'dev-secret-key-change-in-production',
+        );
         return {
           secret: jwtSecret,
           signOptions: {
