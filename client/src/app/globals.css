@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@keyframes modalOverlayIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes modalPanelIn {
+	from {
+		opacity: 0;
+		transform: translateY(14px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes modalOverlayOut {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes modalPanelOut {
+	from {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(10px) scale(0.98);
+	}
+}
+
+.nm-modal-overlay {
+	animation: modalOverlayIn 180ms ease-out;
+}
+
+.nm-modal-panel {
+	animation: modalPanelIn 220ms ease-out;
+}
+
+.nm-modal-overlay-out {
+	animation: modalOverlayOut 180ms ease-in forwards;
+}
+
+.nm-modal-panel-out {
+	animation: modalPanelOut 180ms ease-in forwards;
+}
+
+.nm-touch-scroll {
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
+}
+

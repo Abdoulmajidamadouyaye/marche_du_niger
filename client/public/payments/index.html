@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logos des paiements</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f6f7f8;
+        color: #1f2937;
+        margin: 0;
+        padding: 32px;
+      }
+
+      .card {
+        max-width: 720px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      code {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #f3f4f6;
+      }
+
+      li {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Ajouter les logos des modes de paiement</h1>
+      <p>
+        Les logos affiches dans l'interface utilisent actuellement ces fichiers SVG dans <code>client/public/payments/</code>:
+      </p>
+      <ul>
+        <li><code>visa.jpg</code> pour la carte Visa</li>
+        <li><code>mynita.png</code> pour MyNITA</li>
+        <li><code>amana.png</code> pour AmanaTa</li>
+      </ul>
+      <p>
+        Vous pouvez remplacer ces SVG par vos propres visuels en gardant les memes noms. Ils seront disponibles via les chemins publics:
+      </p>
+      <ul>
+        <li><code>/payments/visa.jpg</code></li>
+        <li><code>/payments/mynita.png</code></li>
+        <li><code>/payments/amana.png</code></li>
+      </ul>
+    </div>
+  </body>
+</html>

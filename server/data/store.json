@@ -1,0 +1,93 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "name": "T-shirt Premium",
+      "shortDescription": "T-shirt en coton premium, confortable et disponible en plusieurs couleurs.",
+      "description": "Découvrez notre T-shirt en coton premium de haute qualité, conçu pour offrir un confort optimal.",
+      "price": 6000,
+      "inStock": true,
+      "category": "Habillement",
+      "categorySlug": "habillement",
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "colors": [
+        "gray",
+        "pink"
+      ],
+      "images": {
+        "gray": "/products/1g.png",
+        "pink": "/products/1p.png"
+      },
+      "createdAt": "2026-04-02T00:12:32.959Z",
+      "updatedAt": "2026-04-02T00:12:32.959Z"
+    },
+    {
+      "id": "2",
+      "name": "Sneakers Street Pro",
+      "shortDescription": "Sneakers légères avec semelle antidérapante.",
+      "description": "Idéales pour la marche en ville avec un excellent maintien du pied.",
+      "price": 18000,
+      "inStock": true,
+      "category": "Chaussures",
+      "categorySlug": "chaussures",
+      "sizes": [
+        "40",
+        "41",
+        "42",
+        "43",
+        "44"
+      ],
+      "colors": [
+        "blue",
+        "black"
+      ],
+      "images": {
+        "blue": "/products/3b.png",
+        "black": "/products/3bl.png"
+      },
+      "createdAt": "2026-04-02T00:12:32.959Z",
+      "updatedAt": "2026-04-02T00:12:32.959Z"
+    },
+    {
+      "id": "3",
+      "name": "iPhone 15 Pro Max",
+      "shortDescription": "Performances extrêmes et caméra professionnelle.",
+      "description": "Le nouvel iPhone 15 Pro Max offre une performance exceptionnelle.",
+      "price": 950000,
+      "inStock": true,
+      "category": "Téléphones",
+      "categorySlug": "telephones",
+      "colors": [
+        "default"
+      ],
+      "images": {
+        "default": "/products/iphone.png"
+      },
+      "createdAt": "2026-04-02T00:12:32.959Z",
+      "updatedAt": "2026-04-02T00:12:32.959Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "NM-1775089747946",
+      "items": [
+        {
+          "productId": "2",
+          "productName": "Sneakers Street Pro",
+          "unitPrice": 18000,
+          "quantity": 1
+        }
+      ],
+      "subtotal": 18000,
+      "paymentMethod": "amana",
+      "status": "pending",
+      "createdAt": "2026-04-02T00:29:07.946Z",
+      "updatedAt": "2026-04-02T00:30:05.165Z"
+    }
+  ]
+}

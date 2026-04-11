@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Product {
+  id              String   @id
+  name            String
+  shortDescription String
+  description     String
+  price           Float
+  originalPrice   Float?
+  discountPercent Int?
+  inStock         Boolean  @default(true)
+  category        String
+  categorySlug    String
+  sizes           Json?
+  colors          Json
+  images          Json
+  vehicleSpecs    Json?
+  motoSpecs       Json?
+  country         String?
+  regions         Json?
+  shippingDelayDays Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Order {
+  id            String   @id
+  items         Json
+  subtotal      Float
+  paymentMethod String
+  customerFirstName String?
+  customerLastName  String?
+  customerPhone     String?
+  customerCity      String?
+  status        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Customer {
+  id        String   @id
+  firstName String
+  lastName  String
+  phone     String   @unique
+  email     String?  @unique
+  passwordHash String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chatMessages ChatMessage[]
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  senderName  String
+  senderRole  String
+  message     String
+  createdAt   DateTime @default(now())
+}
