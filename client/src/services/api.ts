@@ -221,6 +221,30 @@ export async function apiAdminLogin(
   }>(res);
 }
 
+export async function apiAdminForgotPassword(
+  email: string
+): Promise<{ message: string }> {
+  const res = await fetch(`${BASE}/auth/admin/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
+export async function apiAdminResetPassword(
+  email: string,
+  token: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  const res = await fetch(`${BASE}/auth/admin/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, token, newPassword }),
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
 export async function apiAdminMe(): Promise<{
   email: string;
   role: string;

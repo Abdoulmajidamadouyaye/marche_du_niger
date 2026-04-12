@@ -10,7 +10,9 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { PrismaService } from '../shared/prisma/prisma.service';
+import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
 import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
 import { CustomerResetPasswordDto } from './dto/customer-reset-password.dto';
@@ -29,7 +31,9 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  loginAdmin(dto: AdminLoginDto): { accessToken: string; admin: { email: string; role: 'admin' } } {
+  async loginAdmin(
+    dto: AdminLoginDto,
+  ): Promise<{ accessToken: string; admin: { email: string; role: 'admin' } }> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
 
@@ -37,23 +41,137 @@ export class AuthService {
       throw new UnauthorizedException('Configuration administrateur incomplète');
     }
 
-    if (dto.email !== adminEmail || dto.password !== adminPassword) {
+    const adminCredential = await this.ensureAdminCredential(adminEmail, adminPassword);
+    const normalizedEmail = dto.email.trim().toLowerCase();
+
+    if (normalizedEmail !== adminCredential.email) {
+      throw new UnauthorizedException('Identifiants administrateur invalides');
+    }
+
+    if (!this.verifyPassword(dto.password, adminCredential.passwordHash)) {
       throw new UnauthorizedException('Identifiants administrateur invalides');
     }
 
     const payload: AdminAuthPayload = {
       sub: 'admin-1',
-      email: adminEmail,
+      email: adminCredential.email,
       role: 'admin',
     };
 
     return {
       accessToken: this.jwtService.sign(payload),
       admin: {
-        email: adminEmail,
+        email: adminCredential.email,
         role: 'admin',
       },
     };
+  }
+
+  async requestAdminPasswordReset(dto: AdminForgotPasswordDto): Promise<{ message: string }> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
+
+    if (!adminEmail || !adminPassword) {
+      throw new UnauthorizedException('Configuration administrateur incomplète');
+    }
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    // Keep response generic to avoid revealing whether the email is the admin account.
+    const genericMessage =
+      'Si ce compte existe, un code de reinitialisation a ete envoye par email.';
+
+    if (normalizedEmail !== adminEmail.trim().toLowerCase()) {
+      return { message: genericMessage };
+    }
+
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const smtpPort = Number(this.configService.get<string>('SMTP_PORT') ?? '0');
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPass = this.configService.get<string>('SMTP_PASS');
+    const smtpFrom = this.configService.get<string>('SMTP_FROM');
+
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      throw new ServiceUnavailableException(
+        'Email de reinitialisation non configure. Configurez SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS et SMTP_FROM.',
+      );
+    }
+
+    const adminCredential = await this.ensureAdminCredential(adminEmail, adminPassword);
+    const resetCode = this.generateResetCode();
+    const resetTokenHash = this.hashResetToken(resetCode);
+    const resetPasswordExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await this.prisma.adminCredential.update({
+      where: { id: adminCredential.id },
+      data: {
+        resetPasswordTokenHash: resetTokenHash,
+        resetPasswordExpiresAt,
+      },
+    });
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: adminCredential.email,
+      subject: 'Code de reinitialisation admin - Marché du Niger',
+      text: `Votre code de reinitialisation admin est: ${resetCode}. Ce code expire dans 10 minutes.`,
+      html: `<p>Votre code de reinitialisation admin est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
+    });
+
+    return { message: genericMessage };
+  }
+
+  async resetAdminPassword(dto: AdminResetPasswordDto): Promise<{ message: string }> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
+
+    if (!adminEmail || !adminPassword) {
+      throw new UnauthorizedException('Configuration administrateur incomplète');
+    }
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const token = dto.token.trim();
+
+    if (normalizedEmail !== adminEmail.trim().toLowerCase()) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    const adminCredential = await this.ensureAdminCredential(adminEmail, adminPassword);
+
+    if (!adminCredential.resetPasswordTokenHash || !adminCredential.resetPasswordExpiresAt) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    if (adminCredential.resetPasswordExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    const tokenHash = this.hashResetToken(token);
+    if (tokenHash !== adminCredential.resetPasswordTokenHash) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    const passwordHash = this.hashPassword(dto.newPassword);
+
+    await this.prisma.adminCredential.update({
+      where: { id: adminCredential.id },
+      data: {
+        passwordHash,
+        resetPasswordTokenHash: null,
+        resetPasswordExpiresAt: null,
+      },
+    });
+
+    return { message: 'Mot de passe admin reinitialise avec succes' };
   }
 
   async registerCustomer(
@@ -290,5 +408,24 @@ export class AuthService {
 
   private generateResetCode(): string {
     return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  private async ensureAdminCredential(adminEmail: string, adminPassword: string) {
+    const normalizedEmail = adminEmail.trim().toLowerCase();
+    const existing = await this.prisma.adminCredential.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.adminCredential.create({
+      data: {
+        id: 'admin-1',
+        email: normalizedEmail,
+        passwordHash: this.hashPassword(adminPassword),
+      },
+    });
   }
 }
