@@ -2,17 +2,32 @@ import {
   Controller,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
   BadRequestException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { v2 as cloudinary } from 'cloudinary';
 import { ConfigService } from '@nestjs/config';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { memoryStorage } from 'multer';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+const MAX_FILES = 8;
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+
+const imageFileFilter = (_req: unknown, file: Express.Multer.File, cb: (error: Error | null, acceptFile: boolean) => void) => {
+  if (!ALLOWED_MIME_TYPES.has(file.mimetype.toLowerCase())) {
+    return cb(
+      new BadRequestException('Format image non supporte. Utilisez jpg, jpeg, png ou webp.'),
+      false,
+    );
+  }
+  cb(null, true);
+};
 
 @ApiTags('upload')
 @Controller('upload')
@@ -31,6 +46,13 @@ export class UploadController {
       }
       if (typeof record.error === 'string' && record.error.trim().length > 0) {
         return record.error;
+      }
+      if (
+        typeof record.error === 'object' &&
+        record.error !== null &&
+        typeof (record.error as Record<string, unknown>).message === 'string'
+      ) {
+        return (record.error as Record<string, string>).message;
       }
 
       try {
@@ -64,13 +86,8 @@ export class UploadController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
-      fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new BadRequestException('Seuls les fichiers image sont acceptés'), false);
-        }
-        cb(null, true);
-      },
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
     }),
   )
   async uploadImage(
@@ -86,7 +103,40 @@ export class UploadController {
       throw new BadRequestException('Aucun fichier fourni');
     }
 
+    return { url: await this.uploadToCloudinary(file) };
+  }
+
+  @Post('images')
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FilesInterceptor('files', MAX_FILES, {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: imageFileFilter,
+    }),
+  )
+  async uploadImages(
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<{ urls: string[] }> {
+    if (!this.cloudinaryReady) {
+      throw new ServiceUnavailableException(
+        'Configuration Cloudinary manquante sur le serveur (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)',
+      );
+    }
+
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Aucun fichier fourni');
+    }
+
+    const urls = await Promise.all(files.map((file) => this.uploadToCloudinary(file)));
+    return { urls };
+  }
+
+  private async uploadToCloudinary(file: Express.Multer.File): Promise<string> {
     let result: { secure_url: string };
+
     try {
       result = await new Promise<{ secure_url: string }>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -105,6 +155,6 @@ export class UploadController {
       throw new BadRequestException(`Echec upload Cloudinary: ${message}`);
     }
 
-    return { url: result.secure_url };
+    return result.secure_url;
   }
 }

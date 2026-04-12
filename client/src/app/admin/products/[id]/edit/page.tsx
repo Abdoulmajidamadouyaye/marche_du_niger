@@ -13,7 +13,7 @@ import {
   VehicleSpecs,
   Country,
 } from "@/types";
-import { apiUploadImage } from "@/services/api";
+import { apiUploadImages } from "@/services/api";
 import { NIGER_REGIONS } from "@/constants/regions";
 import { ArrowLeft, Upload, X } from "lucide-react";
 import Link from "next/link";
@@ -350,7 +350,7 @@ const AdminEditProductPage = () => {
 
     try {
       notify("Téléchargement des images...", "info", 0);
-      const urls = await Promise.all(files.map((file) => apiUploadImage(file)));
+      const urls = await apiUploadImages(files);
       const validUrls = urls.filter(Boolean);
       if (validUrls.length === 0) return;
 

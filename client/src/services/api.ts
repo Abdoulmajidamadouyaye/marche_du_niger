@@ -35,7 +35,11 @@ function customerAuthHeaders(): Record<string, string> {
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((err as { message?: string }).message ?? "API error");
+    const payload = err as { message?: string | string[] };
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(" | ")
+      : payload.message ?? "API error";
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -57,6 +61,23 @@ export async function apiUploadImage(file: File): Promise<string> {
   });
   const data = await handleResponse<{ url: string }>(res);
   return data.url;
+}
+
+export async function apiUploadImages(files: File[]): Promise<string[]> {
+  if (files.length === 0) return [];
+
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file);
+  }
+
+  const res = await fetch(`${BASE}/upload/images`, {
+    method: "POST",
+    headers: { ...authHeaders() },
+    body: formData,
+  });
+  const data = await handleResponse<{ urls: string[] }>(res);
+  return data.urls ?? [];
 }
 
 export async function apiCreateProduct(
