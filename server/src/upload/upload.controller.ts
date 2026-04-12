@@ -19,6 +19,30 @@ import { memoryStorage } from 'multer';
 export class UploadController {
   private readonly cloudinaryReady: boolean;
 
+  private extractCloudinaryErrorMessage(error: unknown): string {
+    if (!error) return 'Erreur Cloudinary inconnue';
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message;
+
+    if (typeof error === 'object') {
+      const record = error as Record<string, unknown>;
+      if (typeof record.message === 'string' && record.message.trim().length > 0) {
+        return record.message;
+      }
+      if (typeof record.error === 'string' && record.error.trim().length > 0) {
+        return record.error;
+      }
+
+      try {
+        return JSON.stringify(record);
+      } catch {
+        return 'Erreur Cloudinary inconnue';
+      }
+    }
+
+    return String(error);
+  }
+
   constructor(private readonly configService: ConfigService) {
     const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
     const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
@@ -77,7 +101,7 @@ export class UploadController {
         stream.end(file.buffer);
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur Cloudinary inconnue';
+      const message = this.extractCloudinaryErrorMessage(error);
       throw new BadRequestException(`Echec upload Cloudinary: ${message}`);
     }
 
