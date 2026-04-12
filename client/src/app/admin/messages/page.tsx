@@ -9,7 +9,7 @@ import { ChatMessageType, ConversationSummaryType } from "@/types";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useFloatingNotice } from "@/context/FloatingNoticeContext";
-import { MessageSquare, Send } from "lucide-react";
+import { ArrowLeft, MessageSquare, Send } from "lucide-react";
 
 const WS_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const ADMIN_LAST_READ_KEY = "nm_admin_chat_last_read_by_customer";
@@ -156,7 +156,7 @@ const AdminMessagesPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
             <MessageSquare className="h-5 w-5" />
@@ -174,9 +174,9 @@ const AdminMessagesPage = () => {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="flex h-[calc(100dvh-215px)] overflow-hidden rounded-xl border border-gray-200 bg-white md:h-[calc(100vh-140px)]">
       {/* Left: conversation list */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 overflow-y-auto">
+      <aside className={`w-full shrink-0 overflow-y-auto border-gray-200 md:w-72 md:border-r ${selectedId ? "hidden md:block" : "block"}`}>
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-900">Conversations clients</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -224,21 +224,29 @@ const AdminMessagesPage = () => {
       </aside>
 
       {/* Right: conversation view */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className={`min-w-0 flex-1 flex-col ${selectedId ? "flex" : "hidden md:flex"}`}>
         {selectedId ? (
           <>
-            <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex items-center gap-2">
+            <div className="border-b border-gray-200 bg-gray-50 px-3 py-3 sm:px-4 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-1.5 text-gray-600 md:hidden"
+                aria-label="Retour aux conversations"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
               <MessageSquare className="h-4 w-4 text-emerald-600" />
               <p className="text-sm font-semibold text-gray-900">
                 {selectedSummary?.customerName ?? selectedId}
               </p>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 px-4 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-2 px-3 py-3 sm:px-4 sm:py-4">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-[88%] rounded-lg px-3 py-2 text-sm md:max-w-[75%] ${
                     msg.senderRole === "admin"
                       ? "ml-auto bg-emerald-600 text-white"
                       : "bg-gray-100 text-gray-800"
@@ -254,7 +262,10 @@ const AdminMessagesPage = () => {
               <div ref={bottomRef} />
             </div>
 
-            <form onSubmit={handleSend} className="border-t border-gray-200 p-3 flex items-center gap-2">
+            <form
+              onSubmit={handleSend}
+              className="sticky bottom-0 border-t border-gray-200 bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-3 flex items-center gap-2"
+            >
               <input
                 type="text"
                 value={draft}
@@ -267,10 +278,10 @@ const AdminMessagesPage = () => {
               <button
                 type="submit"
                 disabled={sending || !draft.trim()}
-                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-emerald-700"
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-emerald-700 sm:px-4"
               >
                 <Send className="h-4 w-4" />
-                Envoyer
+                <span className="hidden sm:inline">Envoyer</span>
               </button>
             </form>
           </>
