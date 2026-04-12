@@ -21,12 +21,7 @@ export function preloadCriticalImages(imageUrls: string[]): void {
  * Get optimized image URL with size hints for responsive loading
  */
 export function getOptimizedImageUrl(
-  url: string,
-  _options: {
-    width?: number;
-    height?: number;
-    quality?: number;
-  } = {}
+  url: string
 ): string {
   // For base64 data URLs, return as-is
   if (url.startsWith("data:")) {

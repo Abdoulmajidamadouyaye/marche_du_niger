@@ -3,6 +3,7 @@
 import { useOrders } from "@/context/OrdersContext";
 import { useProducts } from "@/context/ProductsContext";
 import { OrderItemType, OrderStatus, OrderType } from "@/types";
+import Image from "next/image";
 import { useMemo } from "react";
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
@@ -115,10 +116,12 @@ const OrderRow = ({
           {safeItems.map((item) => (
             <li key={`${item.productId}-${item.productName}`} className="flex items-center gap-3">
               <div className="relative h-12 w-12 overflow-hidden rounded-md border border-gray-200 bg-gray-50 shrink-0">
-                <img
+                <Image
                   src={resolveImageSrc(item)}
                   alt={item.productName}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="48px"
+                  className="object-cover"
                   loading="lazy"
                   onError={(event) => {
                     const target = event.currentTarget;
