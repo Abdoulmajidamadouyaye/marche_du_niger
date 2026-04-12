@@ -262,8 +262,9 @@ const AdminAddProductPage = () => {
         return next;
       });
       setErrors((prev) => ({ ...prev, imageUrl: undefined }));
-    } catch {
-      notify("Erreur lors du téléchargement des images.", "error", 3000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur lors du telechargement des images.";
+      notify(message, "error", 4000);
     } finally {
       event.target.value = "";
     }
