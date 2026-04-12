@@ -5,6 +5,29 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
+function deriveAllowedOrigins(clientUrl?: string): string[] {
+  if (!clientUrl) return [];
+
+  try {
+    const parsed = new URL(clientUrl);
+    const origins = new Set<string>([parsed.origin]);
+
+    // Allow both apex and www domains to avoid CORS issues when domain redirects differ.
+    if (parsed.hostname.includes('.') && parsed.hostname !== 'localhost') {
+      if (parsed.hostname.startsWith('www.')) {
+        origins.add(`${parsed.protocol}//${parsed.hostname.slice(4)}`);
+      } else {
+        origins.add(`${parsed.protocol}//www.${parsed.hostname}`);
+      }
+    }
+
+    return Array.from(origins);
+  } catch {
+    console.warn('[config] CLIENT_URL is not a valid URL. Using raw value for CORS allowlist.');
+    return [clientUrl];
+  }
+}
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
@@ -27,7 +50,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const localOrigins = ['http://localhost:3000', 'http://localhost:3001'];
-  const allowedOrigins = Array.from(new Set([...(clientUrl ? [clientUrl] : []), ...localOrigins]));
+  const allowedOrigins = Array.from(new Set([...deriveAllowedOrigins(clientUrl), ...localOrigins]));
 
   app.use(json({ limit: '5mb' }));
   app.use(urlencoded({ extended: true, limit: '5mb' }));

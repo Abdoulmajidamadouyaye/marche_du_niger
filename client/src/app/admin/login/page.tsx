@@ -8,7 +8,7 @@ import { useFloatingNotice } from "@/context/FloatingNoticeContext";
 import { apiAdminLogin } from "@/services/api";
 
 const AdminLoginPage = () => {
-  const [email, setEmail] = useState("admin@nigermarcher.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,9 +47,14 @@ const AdminLoginPage = () => {
       localStorage.setItem("nm_admin_token", accessToken);
       notify("Connexion admin reussie.", "success", 2600);
       router.replace("/admin");
-    } catch {
-      setError("Identifiants administrateur invalides");
-      notify("Identifiants administrateur invalides", "error", 3400);
+    } catch (error) {
+      const rawMessage = error instanceof Error ? error.message : "Connexion admin impossible";
+      const message =
+        rawMessage === "Failed to fetch"
+          ? "Impossible de joindre le serveur. Verifiez le domaine frontend autorise dans CLIENT_URL."
+          : rawMessage;
+      setError(message);
+      notify(message, "error", 3600);
     } finally {
       setLoading(false);
     }
