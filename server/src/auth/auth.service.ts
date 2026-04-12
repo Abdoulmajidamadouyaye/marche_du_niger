@@ -1,7 +1,14 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import nodemailer from 'nodemailer';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
@@ -116,7 +123,7 @@ export class AuthService {
 
   async requestCustomerPasswordReset(
     dto: CustomerForgotPasswordDto,
-  ): Promise<{ message: string; resetToken?: string; resetUrl?: string }> {
+  ): Promise<{ message: string }> {
     const normalizedEmail = dto.email.trim().toLowerCase();
     const customer = await this.prisma.customer.findUnique({
       where: { email: normalizedEmail },
@@ -125,14 +132,25 @@ export class AuthService {
     // Keep response generic to avoid revealing whether an account exists.
     if (!customer || !customer.email) {
       return {
-        message:
-          'Si ce compte existe, un lien de reinitialisation a ete genere.',
+        message: 'Si ce compte existe, un code de reinitialisation a ete envoye par email.',
       };
     }
 
-    const resetToken = randomBytes(32).toString('hex');
-    const resetTokenHash = this.hashResetToken(resetToken);
-    const resetPasswordExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const smtpHost = this.configService.get<string>('SMTP_HOST');
+    const smtpPort = Number(this.configService.get<string>('SMTP_PORT') ?? '0');
+    const smtpUser = this.configService.get<string>('SMTP_USER');
+    const smtpPass = this.configService.get<string>('SMTP_PASS');
+    const smtpFrom = this.configService.get<string>('SMTP_FROM');
+
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      throw new ServiceUnavailableException(
+        'Email de reinitialisation non configure. Configurez SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS et SMTP_FROM.',
+      );
+    }
+
+    const resetCode = this.generateResetCode();
+    const resetTokenHash = this.hashResetToken(resetCode);
+    const resetPasswordExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await this.prisma.customer.update({
       where: { id: customer.id },
@@ -142,15 +160,26 @@ export class AuthService {
       },
     });
 
-    const clientUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
-    const resetUrl = `${clientUrl}/login?mode=reset&email=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(resetToken)}`;
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
 
-    // TODO: branch an email provider here (Resend/Brevo) for production delivery.
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: normalizedEmail,
+      subject: 'Code de reinitialisation - Marché du Niger',
+      text: `Votre code de reinitialisation est: ${resetCode}. Ce code expire dans 10 minutes.`,
+      html: `<p>Votre code de reinitialisation est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
+    });
+
     return {
-      message:
-        'Lien de reinitialisation genere. Utilisez le token ou le lien pour choisir un nouveau mot de passe.',
-      resetToken,
-      resetUrl,
+      message: 'Si ce compte existe, un code de reinitialisation a ete envoye par email.',
     };
   }
 
@@ -257,5 +286,9 @@ export class AuthService {
 
   private hashResetToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private generateResetCode(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
   }
 }

@@ -6,7 +6,8 @@ import { apiAdminLogin, apiCustomerForgotPassword, apiCustomerResetPassword } fr
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-type AuthMode = "login" | "register" | "forgot" | "reset";
+type AuthMode = "login" | "register";
+type ForgotStep = "none" | "request" | "verify";
 
 const normalizePhone = (phone: string) => phone.replace(/\s+/g, "").trim();
 
@@ -15,38 +16,18 @@ export default function LoginPage() {
   const { customer, login, register, loading } = useCustomer();
   const { notify } = useFloatingNotice();
   const [mode, setMode] = useState<AuthMode>("login");
+  const [forgotStep, setForgotStep] = useState<ForgotStep>("none");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [resetToken, setResetToken] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [resetLink, setResetLink] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const queryMode = params.get("mode");
-    const queryEmail = params.get("email");
-    const queryToken = params.get("token");
-
-    if (queryEmail) {
-      setEmail(queryEmail);
-    }
-
-    if (queryToken) {
-      setResetToken(queryToken);
-    }
-
-    if (queryMode === "reset") {
-      setMode("reset");
-    }
-  }, []);
 
   useEffect(() => {
     if (!loading && customer) {
@@ -55,23 +36,25 @@ export default function LoginPage() {
   }, [customer, loading, router]);
 
   const pageTitle = useMemo(
-    () => {
-      if (mode === "login") return "Connexion client";
-      if (mode === "register") return "Creation de compte";
-      if (mode === "forgot") return "Mot de passe oublie";
-      return "Reinitialiser le mot de passe";
-    },
+    () => (mode === "login" ? "Connexion client" : "Creation de compte"),
     [mode]
   );
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const resetForgotFlow = () => {
+    setForgotStep("none");
+    setResetCode("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+  };
+
+  const handleLoginOrRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const compactPhone = normalizePhone(phone);
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
 
-    if ((mode === "login" || mode === "register") && (!normalizedEmail || !normalizedPassword)) {
+    if (!normalizedEmail || !normalizedPassword) {
       setError("Veuillez renseigner l'email et le mot de passe.");
       notify("Veuillez renseigner l'email et le mot de passe.", "error", 3200);
       return;
@@ -83,7 +66,7 @@ export default function LoginPage() {
       return;
     }
 
-    if ((mode === "login" || mode === "register") && normalizedPassword.length < 6) {
+    if (normalizedPassword.length < 6) {
       setError("Mot de passe trop court (minimum 6 caracteres).");
       notify("Mot de passe trop court (minimum 6 caracteres).", "error", 3200);
       return;
@@ -101,54 +84,19 @@ export default function LoginPage() {
         notify("Numero invalide. Exemple: +22790000000", "error", 3200);
         return;
       }
+
+      if (normalizedPassword !== confirmPassword.trim()) {
+        setError("La confirmation du mot de passe ne correspond pas.");
+        notify("La confirmation du mot de passe ne correspond pas.", "error", 3200);
+        return;
+      }
     }
 
     setSubmitting(true);
     setError("");
-    setResetLink("");
     notify("Traitement en cours...", "info", 1600);
 
     try {
-      if (mode === "forgot") {
-        const result = await apiCustomerForgotPassword(normalizedEmail);
-        setResetLink(result.resetUrl ?? "");
-        if (result.resetToken) {
-          setResetToken(result.resetToken);
-          setMode("reset");
-          notify("Token de reinitialisation genere. Definissez votre nouveau mot de passe.", "success", 4000);
-        } else {
-          notify(result.message, "success", 3800);
-        }
-        return;
-      }
-
-      if (mode === "reset") {
-        const cleanToken = resetToken.trim();
-        const cleanNewPassword = newPassword.trim();
-        const cleanConfirm = confirmNewPassword.trim();
-
-        if (!normalizedEmail || !cleanToken || !cleanNewPassword || !cleanConfirm) {
-          throw new Error("Veuillez renseigner email, token et nouveau mot de passe.");
-        }
-
-        if (cleanNewPassword.length < 6) {
-          throw new Error("Nouveau mot de passe trop court (minimum 6 caracteres).");
-        }
-
-        if (cleanNewPassword !== cleanConfirm) {
-          throw new Error("La confirmation du mot de passe ne correspond pas.");
-        }
-
-        const result = await apiCustomerResetPassword(normalizedEmail, cleanToken, cleanNewPassword);
-        notify(result.message, "success", 3000);
-        setPassword("");
-        setNewPassword("");
-        setConfirmNewPassword("");
-        setResetToken("");
-        setMode("login");
-        return;
-      }
-
       if (mode === "login") {
         try {
           await login(normalizedEmail, normalizedPassword);
@@ -184,13 +132,96 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError("Veuillez renseigner votre email.");
+      notify("Veuillez renseigner votre email.", "error", 3200);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Email invalide.");
+      notify("Email invalide.", "error", 3200);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const result = await apiCustomerForgotPassword(normalizedEmail);
+      notify(result.message, "success", 3800);
+      setForgotStep("verify");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible de generer le code.";
+      setError(message);
+      notify(message, "error", 3600);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const cleanCode = resetCode.trim();
+    const cleanNewPassword = newPassword.trim();
+    const cleanConfirm = confirmNewPassword.trim();
+
+    if (!normalizedEmail || !cleanCode || !cleanNewPassword || !cleanConfirm) {
+      setError("Veuillez renseigner email, code et nouveau mot de passe.");
+      notify("Veuillez renseigner email, code et nouveau mot de passe.", "error", 3200);
+      return;
+    }
+
+    if (cleanCode.length < 6) {
+      setError("Code invalide.");
+      notify("Code invalide.", "error", 3200);
+      return;
+    }
+
+    if (cleanNewPassword.length < 6) {
+      setError("Nouveau mot de passe trop court (minimum 6 caracteres).");
+      notify("Nouveau mot de passe trop court (minimum 6 caracteres).", "error", 3200);
+      return;
+    }
+
+    if (cleanNewPassword !== cleanConfirm) {
+      setError("La confirmation du mot de passe ne correspond pas.");
+      notify("La confirmation du mot de passe ne correspond pas.", "error", 3200);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const result = await apiCustomerResetPassword(normalizedEmail, cleanCode, cleanNewPassword);
+      notify(result.message, "success", 3200);
+      resetForgotFlow();
+      setPassword("");
+      setMode("login");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible de reinitialiser le mot de passe.";
+      setError(message);
+      notify(message, "error", 3600);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
     return (
       <div className="mx-auto max-w-xl py-10">
         <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex rounded-2xl bg-gray-100 p-1">
             <button
               type="button"
-              onClick={() => setMode("login")}
+              onClick={() => {
+                setMode("login");
+                resetForgotFlow();
+              }}
               className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 mode === "login" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600"
               }`}
@@ -199,7 +230,10 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("register")}
+              onClick={() => {
+                setMode("register");
+                resetForgotFlow();
+              }}
               className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 mode === "register" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600"
               }`}
@@ -211,11 +245,103 @@ export default function LoginPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Connexion
+              {mode === "login" ? "Connexion" : "Inscription"}
             </p>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          {mode === "login" && forgotStep !== "none" ? (
+            <form className="space-y-4" onSubmit={forgotStep === "request" ? handleForgotRequest : handleResetSubmit}>
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {forgotStep === "request"
+                  ? "Entrez votre email. Un code sera envoye pour reinitialiser votre mot de passe."
+                  : "Entrez le code recu par email puis votre nouveau mot de passe."}
+              </p>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                  placeholder="ali@example.com"
+                />
+              </div>
+
+              {forgotStep === "verify" && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Code d&apos;authentification</label>
+                    <input
+                      type="text"
+                      value={resetCode}
+                      onChange={(event) => setResetCode(event.target.value)}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                      placeholder="Ex: 123456"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                      placeholder="minimum 6 caracteres"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(event) => setConfirmNewPassword(event.target.value)}
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                      placeholder="retapez le nouveau mot de passe"
+                    />
+                  </div>
+                </>
+              )}
+
+              {error && (
+                <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+              )}
+
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={resetForgotFlow}
+                  className="text-sm font-medium text-gray-600 hover:underline"
+                >
+                  Retour connexion
+                </button>
+                {forgotStep === "verify" && (
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep("request")}
+                    className="text-sm font-medium text-emerald-700 hover:underline"
+                  >
+                    Renvoyer un code
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {submitting
+                  ? "Traitement..."
+                  : forgotStep === "request"
+                    ? "Envoyer le code"
+                    : "Reinitialiser le mot de passe"}
+              </button>
+            </form>
+          ) : (
+          <form className="space-y-4" onSubmit={handleLoginOrRegister}>
             {mode === "register" && (
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -251,47 +377,15 @@ export default function LoginPage() {
                     placeholder="+22790000000"
                   />
                 </div>
-              </>
-            )}
-
-            {mode === "forgot" && (
-              <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Saisissez votre email client pour generer un token de reinitialisation.
-              </p>
-            )}
-
-            {mode === "reset" && (
-              <>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Token de reinitialisation</label>
-                  <input
-                    type="text"
-                    value={resetToken}
-                    onChange={(event) => setResetToken(event.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
-                    placeholder="Collez le token ici"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
-                    placeholder="minimum 6 caracteres"
-                  />
-                </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
                   <input
                     type="password"
-                    value={confirmNewPassword}
-                    onChange={(event) => setConfirmNewPassword(event.target.value)}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                     className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
-                    placeholder="retapez le nouveau mot de passe"
+                    placeholder="retapez le mot de passe"
                   />
                 </div>
               </>
@@ -316,15 +410,8 @@ export default function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
                 placeholder="minimum 6 caracteres"
-                disabled={mode === "forgot" || mode === "reset"}
               />
             </div>
-
-            {mode === "forgot" && resetLink && (
-              <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700 break-all">
-                Lien genere: {resetLink}
-              </p>
-            )}
 
             {error && (
               <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -333,7 +420,11 @@ export default function LoginPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={() => setMode("forgot")}
+                onClick={() => {
+                  setMode("login");
+                  setForgotStep("request");
+                  setError("");
+                }}
                 className="text-sm font-medium text-emerald-700 hover:underline"
               >
                 Mot de passe oublie ?
@@ -341,7 +432,10 @@ export default function LoginPage() {
               {mode !== "login" && (
                 <button
                   type="button"
-                  onClick={() => setMode("login")}
+                  onClick={() => {
+                    setMode("login");
+                    resetForgotFlow();
+                  }}
                   className="text-sm font-medium text-gray-600 hover:underline"
                 >
                   Retour connexion
@@ -358,13 +452,10 @@ export default function LoginPage() {
                 ? "Traitement..."
                 : mode === "login"
                   ? "Se connecter"
-                  : mode === "register"
-                    ? "Creer mon compte"
-                    : mode === "forgot"
-                      ? "Generer le lien"
-                      : "Reinitialiser le mot de passe"}
+                  : "Creer mon compte"}
             </button>
           </form>
+          )}
         </div>
       </div>
     );

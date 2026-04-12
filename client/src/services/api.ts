@@ -267,13 +267,13 @@ export async function apiCustomerLogin(
 
 export async function apiCustomerForgotPassword(
   email: string
-): Promise<{ message: string; resetToken?: string; resetUrl?: string }> {
+): Promise<{ message: string }> {
   const res = await fetch(`${BASE}/auth/customer/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
-  return handleResponse<{ message: string; resetToken?: string; resetUrl?: string }>(res);
+  return handleResponse<{ message: string }>(res);
 }
 
 export async function apiCustomerResetPassword(
