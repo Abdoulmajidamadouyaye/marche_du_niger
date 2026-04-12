@@ -1,10 +1,12 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
+import { CustomerResetPasswordDto } from './dto/customer-reset-password.dto';
 import { CustomerRegisterDto } from './dto/customer-register.dto';
 import {
   AdminAuthPayload,
@@ -112,6 +114,81 @@ export class AuthService {
     return { count };
   }
 
+  async requestCustomerPasswordReset(
+    dto: CustomerForgotPasswordDto,
+  ): Promise<{ message: string; resetToken?: string; resetUrl?: string }> {
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const customer = await this.prisma.customer.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    // Keep response generic to avoid revealing whether an account exists.
+    if (!customer || !customer.email) {
+      return {
+        message:
+          'Si ce compte existe, un lien de reinitialisation a ete genere.',
+      };
+    }
+
+    const resetToken = randomBytes(32).toString('hex');
+    const resetTokenHash = this.hashResetToken(resetToken);
+    const resetPasswordExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    await this.prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        resetPasswordTokenHash: resetTokenHash,
+        resetPasswordExpiresAt,
+      },
+    });
+
+    const clientUrl = this.configService.get<string>('CLIENT_URL', 'http://localhost:3000');
+    const resetUrl = `${clientUrl}/login?mode=reset&email=${encodeURIComponent(normalizedEmail)}&token=${encodeURIComponent(resetToken)}`;
+
+    // TODO: branch an email provider here (Resend/Brevo) for production delivery.
+    return {
+      message:
+        'Lien de reinitialisation genere. Utilisez le token ou le lien pour choisir un nouveau mot de passe.',
+      resetToken,
+      resetUrl,
+    };
+  }
+
+  async resetCustomerPassword(dto: CustomerResetPasswordDto): Promise<{ message: string }> {
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const token = dto.token.trim();
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!customer || !customer.resetPasswordTokenHash || !customer.resetPasswordExpiresAt) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    if (customer.resetPasswordExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    const tokenHash = this.hashResetToken(token);
+    if (tokenHash !== customer.resetPasswordTokenHash) {
+      throw new BadRequestException('Token de reinitialisation invalide ou expire');
+    }
+
+    const passwordHash = this.hashPassword(dto.newPassword);
+
+    await this.prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        passwordHash,
+        resetPasswordTokenHash: null,
+        resetPasswordExpiresAt: null,
+      },
+    });
+
+    return { message: 'Mot de passe reinitialise avec succes' };
+  }
+
   verifyAdminToken(token: string): AdminAuthPayload {
     const payload = this.jwtService.verify<AdminAuthPayload | CustomerAuthPayload>(token);
     if (payload.role !== 'admin') {
@@ -176,5 +253,9 @@ export class AuthService {
     if (incomingHash.length !== storedHashBuffer.length) return false;
 
     return timingSafeEqual(incomingHash, storedHashBuffer);
+  }
+
+  private hashResetToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 }

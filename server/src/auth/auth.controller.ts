@@ -3,7 +3,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
+import { CustomerResetPasswordDto } from './dto/customer-reset-password.dto';
 import { CustomerRegisterDto } from './dto/customer-register.dto';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { CustomerAuthGuard } from './guards/customer-auth.guard';
@@ -26,6 +28,16 @@ export class AuthController {
   @Post('customer/login')
   loginCustomer(@Body() dto: CustomerLoginDto) {
     return this.authService.loginCustomer(dto);
+  }
+
+  @Post('customer/forgot-password')
+  forgotCustomerPassword(@Body() dto: CustomerForgotPasswordDto) {
+    return this.authService.requestCustomerPasswordReset(dto);
+  }
+
+  @Post('customer/reset-password')
+  resetCustomerPassword(@Body() dto: CustomerResetPasswordDto) {
+    return this.authService.resetCustomerPassword(dto);
   }
 
   @Get('admin/me')

@@ -265,6 +265,30 @@ export async function apiCustomerLogin(
   return handleResponse<{ accessToken: string; customer: CustomerType }>(res);
 }
 
+export async function apiCustomerForgotPassword(
+  email: string
+): Promise<{ message: string; resetToken?: string; resetUrl?: string }> {
+  const res = await fetch(`${BASE}/auth/customer/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse<{ message: string; resetToken?: string; resetUrl?: string }>(res);
+}
+
+export async function apiCustomerResetPassword(
+  email: string,
+  token: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  const res = await fetch(`${BASE}/auth/customer/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, token, newPassword }),
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
 export async function apiCustomerMe(): Promise<CustomerType> {
   const res = await fetch(`${BASE}/auth/customer/me`, {
     headers: { ...customerAuthHeaders() },
