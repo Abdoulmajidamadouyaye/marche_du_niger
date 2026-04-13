@@ -3,7 +3,7 @@ services:
     name: marche-du-niger-api
     runtime: node
     rootDir: server
-    buildCommand: pnpm install && pnpm prisma:generate && pnpm build
+    buildCommand: pnpm install && pnpm prisma:generate && pnpm prisma:push && pnpm build
     startCommand: pnpm start
     envVars:
       - key: NODE_ENV
