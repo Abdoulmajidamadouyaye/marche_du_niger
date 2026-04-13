@@ -73,9 +73,9 @@ export class UploadController {
     this.cloudinaryReady = Boolean(cloudName && apiKey && apiSecret);
 
     cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
+      cloud_name: 'dbpxhx7k7',
+      api_key: '852441427929288',
+      api_secret: '-sTLISbLloK7tGasWCGU-UL2rwM',
     });
   }
 

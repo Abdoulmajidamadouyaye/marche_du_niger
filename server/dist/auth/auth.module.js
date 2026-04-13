@@ -24,10 +24,7 @@ exports.AuthModule = AuthModule = __decorate([
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => {
-                    const jwtSecret = configService.get('JWT_SECRET');
-                    if (!jwtSecret) {
-                        throw new Error('JWT_SECRET environment variable is required');
-                    }
+                    const jwtSecret = configService.get('JWT_SECRET', 'dev-secret-key-change-in-production');
                     return {
                         secret: jwtSecret,
                         signOptions: {

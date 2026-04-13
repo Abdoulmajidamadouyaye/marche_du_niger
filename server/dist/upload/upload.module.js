@@ -8,12 +8,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploadModule = void 0;
 const common_1 = require("@nestjs/common");
+const auth_module_1 = require("../auth/auth.module");
 const upload_controller_1 = require("./upload.controller");
 let UploadModule = class UploadModule {
 };
 exports.UploadModule = UploadModule;
 exports.UploadModule = UploadModule = __decorate([
     (0, common_1.Module)({
+        imports: [auth_module_1.AuthModule],
         controllers: [upload_controller_1.UploadController],
     })
 ], UploadModule);
