@@ -2,7 +2,7 @@
 
 import { useCustomer } from "@/context/CustomerContext";
 import { useFloatingNotice } from "@/context/FloatingNoticeContext";
-import { apiAdminLogin, apiCustomerForgotPassword, apiCustomerResetPassword } from "@/services/api";
+import { apiCustomerForgotPassword, apiCustomerResetPassword } from "@/services/api";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -10,6 +10,21 @@ type AuthMode = "login" | "register";
 type ForgotStep = "none" | "request" | "verify";
 
 const normalizePhone = (phone: string) => phone.replace(/\s+/g, "").trim();
+
+const toUserFacingAuthError = (rawMessage: string, mode: AuthMode) => {
+  const normalized = rawMessage.toLowerCase();
+  const hasInvalidCredentialHint =
+    normalized.includes("invalid") ||
+    normalized.includes("incorrect") ||
+    normalized.includes("aucun compte") ||
+    normalized.includes("administrateur");
+
+  if (mode === "login" && hasInvalidCredentialHint) {
+    return "Identifiant invalide";
+  }
+
+  return rawMessage;
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,7 +51,7 @@ export default function LoginPage() {
   }, [customer, loading, router]);
 
   const pageTitle = useMemo(
-    () => (mode === "login" ? "Connexion client" : "Creation de compte"),
+    () => (mode === "login" ? "Connexion" : "Creation de compte"),
     [mode]
   );
 
@@ -98,19 +113,10 @@ export default function LoginPage() {
 
     try {
       if (mode === "login") {
-        try {
-          await login(normalizedEmail, normalizedPassword);
-          notify("Connexion client reussie.", "success", 2600);
-          router.replace("/");
-          return;
-        } catch {
-          const { accessToken } = await apiAdminLogin(normalizedEmail, normalizedPassword);
-          localStorage.removeItem("nm_customer_token");
-          localStorage.setItem("nm_admin_token", accessToken);
-          notify("Connexion admin reussie.", "success", 2600);
-          router.replace("/admin");
-          return;
-        }
+        await login(normalizedEmail, normalizedPassword);
+        notify("Connexion client reussie.", "success", 2600);
+        router.replace("/");
+        return;
       } else {
         await register(
           firstName.trim(),
@@ -124,7 +130,8 @@ export default function LoginPage() {
         return;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible de continuer.";
+      const rawMessage = err instanceof Error ? err.message : "Impossible de continuer.";
+      const message = toUserFacingAuthError(rawMessage, mode);
       setError(message);
       notify(message, "error", 3600);
     } finally {
@@ -226,7 +233,7 @@ export default function LoginPage() {
                 mode === "login" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600"
               }`}
             >
-              J&apos;ai deja un compte
+              Connexion
             </button>
             <button
               type="button"
@@ -245,7 +252,7 @@ export default function LoginPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
             <p className="mt-2 text-sm text-gray-600">
-              {mode === "login" ? "Connexion" : "Inscription"}
+              {mode === "login" ? "Accedez a votre compte" : "Inscription"}
             </p>
           </div>
 
@@ -379,6 +386,28 @@ export default function LoginPage() {
                 </div>
 
                 <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                    placeholder="ali@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Mot de passe</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                    placeholder="minimum 6 caracteres"
+                  />
+                </div>
+
+                <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
                   <input
                     type="password"
@@ -391,57 +420,50 @@ export default function LoginPage() {
               </>
             )}
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
-                placeholder="ali@example.com"
-              />
-            </div>
+            {mode === "login" && (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                    placeholder="ali@example.com"
+                  />
+                </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
-                placeholder="minimum 6 caracteres"
-              />
-            </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Mot de passe</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-300"
+                    placeholder="minimum 6 caracteres"
+                  />
+                </div>
+              </>
+            )}
 
             {error && (
               <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("login");
-                  setForgotStep("request");
-                  setError("");
-                }}
-                className="text-sm font-medium text-emerald-700 hover:underline"
-              >
-                Mot de passe oublie ?
-              </button>
-              {mode !== "login" && (
+            {mode === "login" && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("login");
-                    resetForgotFlow();
+                    setForgotStep("request");
+                    setError("");
                   }}
-                  className="text-sm font-medium text-gray-600 hover:underline"
+                  className="text-sm font-medium text-emerald-700 hover:underline"
                 >
-                  Retour connexion
+                  Mot de passe oublie ?
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             <button
               type="submit"

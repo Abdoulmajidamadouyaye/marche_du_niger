@@ -45,11 +45,11 @@ export class AuthService {
     const normalizedEmail = dto.email.trim().toLowerCase();
 
     if (normalizedEmail !== adminCredential.email) {
-      throw new UnauthorizedException('Identifiants administrateur invalides');
+      throw new UnauthorizedException('Identifiants invalides ou incorrects');
     }
 
     if (!this.verifyPassword(dto.password, adminCredential.passwordHash)) {
-      throw new UnauthorizedException('Identifiants administrateur invalides');
+      throw new UnauthorizedException('Identifiants invalides ou incorrects');
     }
 
     const payload: AdminAuthPayload = {
@@ -119,13 +119,19 @@ export class AuthService {
       },
     });
 
-    await transporter.sendMail({
-      from: smtpFrom,
-      to: adminCredential.email,
-      subject: 'Code de reinitialisation admin - Marché du Niger',
-      text: `Votre code de reinitialisation admin est: ${resetCode}. Ce code expire dans 10 minutes.`,
-      html: `<p>Votre code de reinitialisation admin est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
-    });
+    try {
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: adminCredential.email,
+        subject: 'Code de reinitialisation admin - Marché du Niger',
+        text: `Votre code de reinitialisation admin est: ${resetCode}. Ce code expire dans 10 minutes.`,
+        html: `<p>Votre code de reinitialisation admin est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'Impossible d\'envoyer le code par email. Verifiez SMTP_USER, SMTP_PASS et SMTP_FROM.',
+      );
+    }
 
     return { message: genericMessage };
   }
@@ -288,13 +294,19 @@ export class AuthService {
       },
     });
 
-    await transporter.sendMail({
-      from: smtpFrom,
-      to: normalizedEmail,
-      subject: 'Code de reinitialisation - Marché du Niger',
-      text: `Votre code de reinitialisation est: ${resetCode}. Ce code expire dans 10 minutes.`,
-      html: `<p>Votre code de reinitialisation est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
-    });
+    try {
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: normalizedEmail,
+        subject: 'Code de reinitialisation - Marché du Niger',
+        text: `Votre code de reinitialisation est: ${resetCode}. Ce code expire dans 10 minutes.`,
+        html: `<p>Votre code de reinitialisation est: <strong>${resetCode}</strong></p><p>Ce code expire dans 10 minutes.</p>`,
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'Impossible d\'envoyer le code par email. Verifiez SMTP_USER, SMTP_PASS et SMTP_FROM.',
+      );
+    }
 
     return {
       message: 'Si ce compte existe, un code de reinitialisation a ete envoye par email.',
