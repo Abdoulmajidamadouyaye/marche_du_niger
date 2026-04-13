@@ -10,7 +10,8 @@
     "prisma:push": "prisma db push",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "images:migrate:cloudinary": "tsx scripts/migrate-product-images.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",
@@ -40,7 +41,11 @@
     "@types/node": "^22.13.10",
     "@types/nodemailer": "^8.0.0",
     "prisma": "^6.17.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -14,60 +14,54 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UploadController = void 0;
 const common_1 = require("@nestjs/common");
-const platform_express_1 = require("@nestjs/platform-express");
 const swagger_1 = require("@nestjs/swagger");
-const cloudinary_1 = require("cloudinary");
-const config_1 = require("@nestjs/config");
-const admin_auth_guard_1 = require("../auth/guards/admin-auth.guard");
+const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
+const upload_service_1 = require("./upload.service");
 let UploadController = class UploadController {
-    constructor(configService) {
-        this.configService = configService;
-        cloudinary_1.v2.config({
-            cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
-            api_key: this.configService.get('CLOUDINARY_API_KEY'),
-            api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
-        });
+    constructor(uploadService) {
+        this.uploadService = uploadService;
     }
-    async uploadImage(file) {
-        if (!file) {
-            throw new common_1.BadRequestException('Aucun fichier fourni');
-        }
-        const result = await new Promise((resolve, reject) => {
-            const stream = cloudinary_1.v2.uploader.upload_stream({ folder: 'marche-du-niger', resource_type: 'image' }, (error, result) => {
-                if (error || !result)
-                    return reject(error ?? new Error('Cloudinary upload failed'));
-                resolve(result);
-            });
-            stream.end(file.buffer);
-        });
-        return { url: result.secure_url };
+    uploadImage(file) {
+        return this.uploadService.uploadImage(file);
     }
 };
 exports.UploadController = UploadController;
 __decorate([
     (0, common_1.Post)('image'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Upload une image vers Cloudinary' }),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            required: ['file'],
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+        },
+    }),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
         storage: (0, multer_1.memoryStorage)(),
-        limits: { fileSize: 10 * 1024 * 1024 },
-        fileFilter: (_req, file, cb) => {
-            if (!file.mimetype.startsWith('image/')) {
-                return cb(new common_1.BadRequestException('Seuls les fichiers image sont acceptés'), false);
+        limits: { fileSize: 5 * 1024 * 1024 },
+        fileFilter: (_req, file, callback) => {
+            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowed.includes(file.mimetype)) {
+                return callback(new common_1.BadRequestException('Format invalide. Utiliser JPG, PNG ou WEBP.'), false);
             }
-            cb(null, true);
+            callback(null, true);
         },
     })),
     __param(0, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], UploadController.prototype, "uploadImage", null);
 exports.UploadController = UploadController = __decorate([
     (0, swagger_1.ApiTags)('upload'),
     (0, common_1.Controller)('upload'),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [upload_service_1.UploadService])
 ], UploadController);
 //# sourceMappingURL=upload.controller.js.map
