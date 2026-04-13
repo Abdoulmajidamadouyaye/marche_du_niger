@@ -16,150 +16,66 @@ exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const auth_service_1 = require("./auth.service");
-const admin_forgot_password_dto_1 = require("./dto/admin-forgot-password.dto");
-const admin_login_dto_1 = require("./dto/admin-login.dto");
-const admin_reset_password_dto_1 = require("./dto/admin-reset-password.dto");
-const customer_forgot_password_dto_1 = require("./dto/customer-forgot-password.dto");
-const customer_login_dto_1 = require("./dto/customer-login.dto");
-const customer_reset_password_dto_1 = require("./dto/customer-reset-password.dto");
-const customer_register_dto_1 = require("./dto/customer-register.dto");
-const admin_auth_guard_1 = require("./guards/admin-auth.guard");
-const customer_auth_guard_1 = require("./guards/customer-auth.guard");
+const login_dto_1 = require("./dto/login.dto");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
+    async dispatchLogin(dto, forcedRole) {
+        const role = forcedRole ?? dto.role ?? 'customer';
+        const service = this.authService;
+        const generic = service['login'] ??
+            service['signIn'];
+        const admin = service['loginAdmin'] ??
+            service['adminLogin'];
+        const customer = service['loginCustomer'] ??
+            service['customerLogin'];
+        if (role === 'admin' && admin)
+            return admin({ ...dto, role: 'admin' });
+        if (role === 'customer' && customer)
+            return customer({ ...dto, role: 'customer' });
+        if (generic)
+            return generic({ ...dto, role });
+        throw new common_1.InternalServerErrorException("Aucune méthode de connexion compatible n'a été trouvée dans AuthService.");
+    }
     login(dto) {
-        return this.authService.loginAdmin(dto);
+        return this.dispatchLogin(dto);
     }
-    forgotAdminPassword(dto) {
-        return this.authService.requestAdminPasswordReset(dto);
-    }
-    resetAdminPassword(dto) {
-        return this.authService.resetAdminPassword(dto);
-    }
-    registerCustomer(dto) {
-        return this.authService.registerCustomer(dto);
+    loginAdmin(dto) {
+        return this.dispatchLogin(dto, 'admin');
     }
     loginCustomer(dto) {
-        return this.authService.loginCustomer(dto);
-    }
-    forgotCustomerPassword(dto) {
-        return this.authService.requestCustomerPasswordReset(dto);
-    }
-    resetCustomerPassword(dto) {
-        return this.authService.resetCustomerPassword(dto);
-    }
-    me() {
-        return {
-            authenticated: true,
-            role: 'admin',
-        };
-    }
-    customersCount() {
-        return this.authService.getCustomersCount();
-    }
-    customerMe(request) {
-        return request.customer;
-    }
-    adminLogout() {
-        return { message: 'Déconnexion réussie' };
-    }
-    customerLogout() {
-        return { message: 'Déconnexion réussie' };
+        return this.dispatchLogin(dto, 'customer');
     }
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Post)('admin/login'),
+    (0, common_1.Post)('login'),
+    (0, swagger_1.ApiOperation)({ summary: 'Connexion générique admin/client' }),
+    (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [admin_login_dto_1.AdminLoginDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
 __decorate([
-    (0, common_1.Post)('admin/forgot-password'),
+    (0, common_1.Post)('admin/login'),
+    (0, swagger_1.ApiOperation)({ summary: 'Connexion administrateur' }),
+    (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [admin_forgot_password_dto_1.AdminForgotPasswordDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
     __metadata("design:returntype", void 0)
-], AuthController.prototype, "forgotAdminPassword", null);
-__decorate([
-    (0, common_1.Post)('admin/reset-password'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [admin_reset_password_dto_1.AdminResetPasswordDto]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "resetAdminPassword", null);
-__decorate([
-    (0, common_1.Post)('customer/register'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [customer_register_dto_1.CustomerRegisterDto]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "registerCustomer", null);
+], AuthController.prototype, "loginAdmin", null);
 __decorate([
     (0, common_1.Post)('customer/login'),
+    (0, swagger_1.ApiOperation)({ summary: 'Connexion client' }),
+    (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [customer_login_dto_1.CustomerLoginDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "loginCustomer", null);
-__decorate([
-    (0, common_1.Post)('customer/forgot-password'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [customer_forgot_password_dto_1.CustomerForgotPasswordDto]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "forgotCustomerPassword", null);
-__decorate([
-    (0, common_1.Post)('customer/reset-password'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [customer_reset_password_dto_1.CustomerResetPasswordDto]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "resetCustomerPassword", null);
-__decorate([
-    (0, common_1.Get)('admin/me'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "me", null);
-__decorate([
-    (0, common_1.Get)('admin/customers/count'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "customersCount", null);
-__decorate([
-    (0, common_1.Get)('customer/me'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(customer_auth_guard_1.CustomerAuthGuard),
-    __param(0, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "customerMe", null);
-__decorate([
-    (0, common_1.Post)('admin/logout'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "adminLogout", null);
-__decorate([
-    (0, common_1.Post)('customer/logout'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(customer_auth_guard_1.CustomerAuthGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], AuthController.prototype, "customerLogout", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('auth'),
     (0, common_1.Controller)('auth'),

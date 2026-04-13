@@ -17,6 +17,7 @@ const products_module_1 = require("./products/products.module");
 const promotions_module_1 = require("./promotions/promotions.module");
 const prisma_module_1 = require("./shared/prisma/prisma.module");
 const upload_module_1 = require("./upload/upload.module");
+const health_module_1 = require("./health/health.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -33,6 +34,7 @@ exports.AppModule = AppModule = __decorate([
             orders_module_1.OrdersModule,
             promotions_module_1.PromotionsModule,
             upload_module_1.UploadModule,
+            health_module_1.HealthModule,
         ],
         controllers: [health_controller_1.HealthController],
     })

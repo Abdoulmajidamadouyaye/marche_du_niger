@@ -1,92 +1,56 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Body, Controller, InternalServerErrorException, Post } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
-import { AdminLoginDto } from './dto/admin-login.dto';
-import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
-import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
-import { CustomerLoginDto } from './dto/customer-login.dto';
-import { CustomerResetPasswordDto } from './dto/customer-reset-password.dto';
-import { CustomerRegisterDto } from './dto/customer-register.dto';
-import { AdminAuthGuard } from './guards/admin-auth.guard';
-import { CustomerAuthGuard } from './guards/customer-auth.guard';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private async dispatchLogin(dto: LoginDto, forcedRole?: 'admin' | 'customer') {
+    const role = forcedRole ?? dto.role ?? 'customer';
+    const service = this.authService as unknown as Record<string, unknown>;
+
+    const generic =
+      (service['login'] as ((payload: LoginDto) => Promise<unknown>) | undefined) ??
+      (service['signIn'] as ((payload: LoginDto) => Promise<unknown>) | undefined);
+
+    const admin =
+      (service['loginAdmin'] as ((payload: LoginDto) => Promise<unknown>) | undefined) ??
+      (service['adminLogin'] as ((payload: LoginDto) => Promise<unknown>) | undefined);
+
+    const customer =
+      (service['loginCustomer'] as ((payload: LoginDto) => Promise<unknown>) | undefined) ??
+      (service['customerLogin'] as ((payload: LoginDto) => Promise<unknown>) | undefined);
+
+    if (role === 'admin' && admin) return admin({ ...dto, role: 'admin' });
+    if (role === 'customer' && customer) return customer({ ...dto, role: 'customer' });
+    if (generic) return generic({ ...dto, role });
+
+    throw new InternalServerErrorException(
+      "Aucune méthode de connexion compatible n'a été trouvée dans AuthService.",
+    );
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: 'Connexion générique admin/client' })
+  @ApiBody({ type: LoginDto })
+  login(@Body() dto: LoginDto) {
+    return this.dispatchLogin(dto);
+  }
+
   @Post('admin/login')
-  login(@Body() dto: AdminLoginDto) {
-    return this.authService.loginAdmin(dto);
-  }
-
-  @Post('admin/forgot-password')
-  forgotAdminPassword(@Body() dto: AdminForgotPasswordDto) {
-    return this.authService.requestAdminPasswordReset(dto);
-  }
-
-  @Post('admin/reset-password')
-  resetAdminPassword(@Body() dto: AdminResetPasswordDto) {
-    return this.authService.resetAdminPassword(dto);
-  }
-
-  @Post('customer/register')
-  registerCustomer(@Body() dto: CustomerRegisterDto) {
-    return this.authService.registerCustomer(dto);
+  @ApiOperation({ summary: 'Connexion administrateur' })
+  @ApiBody({ type: LoginDto })
+  loginAdmin(@Body() dto: LoginDto) {
+    return this.dispatchLogin(dto, 'admin');
   }
 
   @Post('customer/login')
-  loginCustomer(@Body() dto: CustomerLoginDto) {
-    return this.authService.loginCustomer(dto);
-  }
-
-  @Post('customer/forgot-password')
-  forgotCustomerPassword(@Body() dto: CustomerForgotPasswordDto) {
-    return this.authService.requestCustomerPasswordReset(dto);
-  }
-
-  @Post('customer/reset-password')
-  resetCustomerPassword(@Body() dto: CustomerResetPasswordDto) {
-    return this.authService.resetCustomerPassword(dto);
-  }
-
-  @Get('admin/me')
-  @ApiBearerAuth()
-  @UseGuards(AdminAuthGuard)
-  me() {
-    return {
-      authenticated: true,
-      role: 'admin',
-    };
-  }
-
-  @Get('admin/customers/count')
-  @ApiBearerAuth()
-  @UseGuards(AdminAuthGuard)
-  customersCount() {
-    return this.authService.getCustomersCount();
-  }
-
-  @Get('customer/me')
-  @ApiBearerAuth()
-  @UseGuards(CustomerAuthGuard)
-  customerMe(@Req() request: Request & { customer?: unknown }) {
-    return request.customer;
-  }
-
-  @Post('admin/logout')
-  @ApiBearerAuth()
-  @UseGuards(AdminAuthGuard)
-  adminLogout() {
-    return { message: 'Déconnexion réussie' };
-  }
-
-  @Post('customer/logout')
-  @ApiBearerAuth()
-  @UseGuards(CustomerAuthGuard)
-  customerLogout() {
-    return { message: 'Déconnexion réussie' };
+  @ApiOperation({ summary: 'Connexion client' })
+  @ApiBody({ type: LoginDto })
+  loginCustomer(@Body() dto: LoginDto) {
+    return this.dispatchLogin(dto, 'customer');
   }
 }
