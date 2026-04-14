@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const auth_service_1 = require("./auth.service");
 const admin_forgot_password_dto_1 = require("./dto/admin-forgot-password.dto");
+const admin_login_dto_1 = require("./dto/admin-login.dto");
 const admin_reset_password_dto_1 = require("./dto/admin-reset-password.dto");
 const customer_forgot_password_dto_1 = require("./dto/customer-forgot-password.dto");
 const customer_login_dto_1 = require("./dto/customer-login.dto");
@@ -28,8 +29,8 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    loginAdmin(body) {
-        return this.authService.adminLogin(body.email, body.password);
+    loginAdmin(dto) {
+        return this.authService.loginAdmin(dto);
     }
     forgotAdminPassword(dto) {
         return this.authService.requestAdminPasswordReset(dto);
@@ -73,7 +74,7 @@ __decorate([
     (0, common_1.Post)('admin/login'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [admin_login_dto_1.AdminLoginDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "loginAdmin", null);
 __decorate([
@@ -119,26 +120,26 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "resetCustomerPassword", null);
 __decorate([
-    Get('admin/me'),
+    (0, common_1.Get)('admin/me'),
     (0, swagger_1.ApiBearerAuth)(),
-    UseGuards(admin_auth_guard_1.AdminAuthGuard),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "me", null);
 __decorate([
-    Get('admin/customers/count'),
+    (0, common_1.Get)('admin/customers/count'),
     (0, swagger_1.ApiBearerAuth)(),
-    UseGuards(admin_auth_guard_1.AdminAuthGuard),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "customersCount", null);
 __decorate([
-    Get('customer/me'),
+    (0, common_1.Get)('customer/me'),
     (0, swagger_1.ApiBearerAuth)(),
-    UseGuards(customer_auth_guard_1.CustomerAuthGuard),
-    __param(0, Req()),
+    (0, common_1.UseGuards)(customer_auth_guard_1.CustomerAuthGuard),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
@@ -146,7 +147,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('admin/logout'),
     (0, swagger_1.ApiBearerAuth)(),
-    UseGuards(admin_auth_guard_1.AdminAuthGuard),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -154,7 +155,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('customer/logout'),
     (0, swagger_1.ApiBearerAuth)(),
-    UseGuards(customer_auth_guard_1.CustomerAuthGuard),
+    (0, common_1.UseGuards)(customer_auth_guard_1.CustomerAuthGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)

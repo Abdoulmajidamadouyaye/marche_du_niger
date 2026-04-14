@@ -16,12 +16,12 @@ class AdminLoginDto {
 }
 exports.AdminLoginDto = AdminLoginDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'admin@nigermarcher.com' }),
+    (0, swagger_1.ApiProperty)({ example: 'abdoulmajidamadouyaye47@gmail.com' }),
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], AdminLoginDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'admin2024' }),
+    (0, swagger_1.ApiProperty)({ example: 'Abdoulmajid47@' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MinLength)(6),
     __metadata("design:type", String)

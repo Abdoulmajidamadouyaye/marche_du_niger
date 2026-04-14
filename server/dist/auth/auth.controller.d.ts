@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
+import { AdminLoginDto } from './dto/admin-login.dto';
 import { AdminResetPasswordDto } from './dto/admin-reset-password.dto';
 import { CustomerForgotPasswordDto } from './dto/customer-forgot-password.dto';
 import { CustomerLoginDto } from './dto/customer-login.dto';
@@ -9,10 +10,13 @@ import { CustomerRegisterDto } from './dto/customer-register.dto';
 export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
-    loginAdmin(body: {
-        email: string;
-        password: string;
-    }): any;
+    loginAdmin(dto: AdminLoginDto): Promise<{
+        accessToken: string;
+        admin: {
+            email: string;
+            role: "admin";
+        };
+    }>;
     forgotAdminPassword(dto: AdminForgotPasswordDto): Promise<{
         message: string;
     }>;
