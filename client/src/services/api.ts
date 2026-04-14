@@ -10,7 +10,9 @@ import {
   ProductType,
 } from "@/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') ||
+  'https://marche-du-niger-api.onrender.com';
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -47,14 +49,14 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export async function apiGetProducts(): Promise<ProductType[]> {
-  const res = await fetch(`${BASE}/products`);
+  const res = await fetch(`${API_BASE_URL}/products`);
   return handleResponse<ProductType[]>(res);
 }
 
 export async function apiUploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch(`${BASE}/upload/image`, {
+  const res = await fetch(`${API_BASE_URL}/upload/image`, {
     method: "POST",
     headers: { ...authHeaders() },
     body: formData,
@@ -71,7 +73,7 @@ export async function apiUploadImages(files: File[]): Promise<string[]> {
     formData.append("files", file);
   }
 
-  const res = await fetch(`${BASE}/upload/images`, {
+  const res = await fetch(`${API_BASE_URL}/upload/images`, {
     method: "POST",
     headers: { ...authHeaders() },
     body: formData,
@@ -83,7 +85,7 @@ export async function apiUploadImages(files: File[]): Promise<string[]> {
 export async function apiCreateProduct(
   data: Omit<ProductType, "id">
 ): Promise<ProductType> {
-  const res = await fetch(`${BASE}/products`, {
+  const res = await fetch(`${API_BASE_URL}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(data),
@@ -95,7 +97,7 @@ export async function apiUpdateProduct(
   id: string,
   data: Partial<ProductType>
 ): Promise<ProductType> {
-  const res = await fetch(`${BASE}/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/products/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(data),
@@ -104,7 +106,7 @@ export async function apiUpdateProduct(
 }
 
 export async function apiDeleteProduct(id: string): Promise<void> {
-  const res = await fetch(`${BASE}/products/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/products/${id}`, {
     method: "DELETE",
     headers: { ...authHeaders() },
   });
@@ -118,7 +120,7 @@ export async function apiSetPromotion(
   id: string,
   discountPercent: number
 ): Promise<ProductType> {
-  const res = await fetch(`${BASE}/products/${id}/promotion`, {
+  const res = await fetch(`${API_BASE_URL}/products/${id}/promotion`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ discountPercent }),
@@ -127,7 +129,7 @@ export async function apiSetPromotion(
 }
 
 export async function apiClearPromotion(id: string): Promise<ProductType> {
-  const res = await fetch(`${BASE}/products/${id}/promotion`, {
+  const res = await fetch(`${API_BASE_URL}/products/${id}/promotion`, {
     method: "DELETE",
     headers: { ...authHeaders() },
   });
@@ -137,7 +139,7 @@ export async function apiClearPromotion(id: string): Promise<ProductType> {
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 export async function apiGetOrders(): Promise<OrderType[]> {
-  const res = await fetch(`${BASE}/orders`, {
+  const res = await fetch(`${API_BASE_URL}/orders`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<OrderType[]>(res);
@@ -169,7 +171,7 @@ export async function apiCreateOrder(
     customerPhone: customer.phone,
     customerCity: customer.city,
   };
-  const res = await fetch(`${BASE}/orders`, {
+  const res = await fetch(`${API_BASE_URL}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -181,7 +183,7 @@ export async function apiUpdateOrderStatus(
   id: string,
   status: OrderStatus
 ): Promise<OrderType> {
-  const res = await fetch(`${BASE}/orders/${id}/status`, {
+  const res = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ status }),
@@ -190,7 +192,7 @@ export async function apiUpdateOrderStatus(
 }
 
 export async function apiDeleteOrder(id: string): Promise<{ deleted: true; id: string }> {
-  const res = await fetch(`${BASE}/orders/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
     method: "DELETE",
     headers: { ...authHeaders() },
   });
@@ -198,7 +200,7 @@ export async function apiDeleteOrder(id: string): Promise<{ deleted: true; id: s
 }
 
 export async function apiGetOrdersAnalytics(): Promise<OrdersAnalyticsType> {
-  const res = await fetch(`${BASE}/orders/analytics`, {
+  const res = await fetch(`${API_BASE_URL}/orders/analytics`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<OrdersAnalyticsType>(res);
@@ -210,7 +212,7 @@ export async function apiAdminLogin(
   email: string,
   password: string
 ): Promise<{ accessToken: string; admin: { email: string; role: string } }> {
-  const res = await fetch(`${BASE}/auth/admin/login`, {
+  const res = await fetch(`${API_BASE_URL}/auth/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -224,7 +226,7 @@ export async function apiAdminLogin(
 export async function apiAdminForgotPassword(
   email: string
 ): Promise<{ message: string }> {
-  const res = await fetch(`${BASE}/auth/admin/forgot-password`, {
+  const res = await fetch(`${API_BASE_URL}/auth/admin/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -237,7 +239,7 @@ export async function apiAdminResetPassword(
   token: string,
   newPassword: string
 ): Promise<{ message: string }> {
-  const res = await fetch(`${BASE}/auth/admin/reset-password`, {
+  const res = await fetch(`${API_BASE_URL}/auth/admin/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token, newPassword }),
@@ -249,14 +251,14 @@ export async function apiAdminMe(): Promise<{
   email: string;
   role: string;
 }> {
-  const res = await fetch(`${BASE}/auth/admin/me`, {
+  const res = await fetch(`${API_BASE_URL}/auth/admin/me`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<{ email: string; role: string }>(res);
 }
 
 export async function apiGetCustomersCount(): Promise<{ count: number }> {
-  const res = await fetch(`${BASE}/auth/admin/customers/count`, {
+  const res = await fetch(`${API_BASE_URL}/auth/admin/customers/count`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<{ count: number }>(res);
@@ -269,7 +271,7 @@ export async function apiCustomerRegister(
   email: string,
   password: string
 ): Promise<{ accessToken: string; customer: CustomerType }> {
-  const res = await fetch(`${BASE}/auth/customer/register`, {
+  const res = await fetch(`${API_BASE_URL}/auth/customer/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ firstName, lastName, phone, email, password }),
@@ -281,7 +283,7 @@ export async function apiCustomerLogin(
   email: string,
   password: string
 ): Promise<{ accessToken: string; customer: CustomerType }> {
-  const res = await fetch(`${BASE}/auth/customer/login`, {
+  const res = await fetch(`${API_BASE_URL}/auth/customer/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -292,7 +294,7 @@ export async function apiCustomerLogin(
 export async function apiCustomerForgotPassword(
   email: string
 ): Promise<{ message: string }> {
-  const res = await fetch(`${BASE}/auth/customer/forgot-password`, {
+  const res = await fetch(`${API_BASE_URL}/auth/customer/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -305,7 +307,7 @@ export async function apiCustomerResetPassword(
   token: string,
   newPassword: string
 ): Promise<{ message: string }> {
-  const res = await fetch(`${BASE}/auth/customer/reset-password`, {
+  const res = await fetch(`${API_BASE_URL}/auth/customer/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, token, newPassword }),
@@ -314,7 +316,7 @@ export async function apiCustomerResetPassword(
 }
 
 export async function apiCustomerMe(): Promise<CustomerType> {
-  const res = await fetch(`${BASE}/auth/customer/me`, {
+  const res = await fetch(`${API_BASE_URL}/auth/customer/me`, {
     headers: { ...customerAuthHeaders() },
   });
   return handleResponse<CustomerType>(res);
@@ -324,7 +326,7 @@ export async function apiCustomerMe(): Promise<CustomerType> {
 
 /** Customer: load their own conversation */
 export async function apiGetMyChatMessages(): Promise<ChatMessageType[]> {
-  const res = await fetch(`${BASE}/chat/messages`, {
+  const res = await fetch(`${API_BASE_URL}/chat/messages`, {
     headers: { ...customerAuthHeaders() },
   });
   return handleResponse<ChatMessageType[]>(res);
@@ -332,7 +334,7 @@ export async function apiGetMyChatMessages(): Promise<ChatMessageType[]> {
 
 /** Customer: send a message */
 export async function apiSendCustomerChatMessage(message: string): Promise<ChatMessageType> {
-  const res = await fetch(`${BASE}/chat/messages`, {
+  const res = await fetch(`${API_BASE_URL}/chat/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...customerAuthHeaders() },
     body: JSON.stringify({ message }),
@@ -342,7 +344,7 @@ export async function apiSendCustomerChatMessage(message: string): Promise<ChatM
 
 /** Admin: conversation summaries */
 export async function apiGetConversationSummaries(): Promise<ConversationSummaryType[]> {
-  const res = await fetch(`${BASE}/chat/admin/conversations`, {
+  const res = await fetch(`${API_BASE_URL}/chat/admin/conversations`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<ConversationSummaryType[]>(res);
@@ -350,7 +352,7 @@ export async function apiGetConversationSummaries(): Promise<ConversationSummary
 
 /** Admin: all messages for one customer */
 export async function apiGetConversation(customerId: string): Promise<ChatMessageType[]> {
-  const res = await fetch(`${BASE}/chat/admin/conversations/${customerId}`, {
+  const res = await fetch(`${API_BASE_URL}/chat/admin/conversations/${customerId}`, {
     headers: { ...authHeaders() },
   });
   return handleResponse<ChatMessageType[]>(res);
@@ -358,7 +360,7 @@ export async function apiGetConversation(customerId: string): Promise<ChatMessag
 
 /** Admin: reply to a customer */
 export async function apiSendAdminChatMessage(customerId: string, message: string): Promise<ChatMessageType> {
-  const res = await fetch(`${BASE}/chat/admin/conversations/${customerId}`, {
+  const res = await fetch(`${API_BASE_URL}/chat/admin/conversations/${customerId}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ message }),

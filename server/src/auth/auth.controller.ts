@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -18,8 +18,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('admin/login')
-  login(@Body() dto: AdminLoginDto) {
-    return this.authService.loginAdmin(dto);
+  loginAdmin(@Body() body: { email: string; password: string }) {
+    return this.authService.adminLogin(body.email, body.password);
   }
 
   @Post('admin/forgot-password')

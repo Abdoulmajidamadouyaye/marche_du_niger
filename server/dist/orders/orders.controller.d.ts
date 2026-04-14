@@ -7,7 +7,7 @@ export declare class OrdersController {
     create(dto: CreateOrderDto): Promise<import("../shared/types/domain.types").OrderEntity>;
     findAll(): Promise<import("../shared/types/domain.types").OrderEntity[]>;
     getAnalytics(): Promise<import("../shared/types/domain.types").OrdersAnalyticsEntity>;
-    findMine(req: any): never[] | Promise<import("../shared/types/domain.types").OrderEntity[]>;
+    findMine(req: any): Promise<import("../shared/types/domain.types").OrderEntity[]> | never[];
     updateStatus(id: string, dto: UpdateOrderStatusDto): Promise<import("../shared/types/domain.types").OrderEntity>;
     remove(id: string): Promise<{
         deleted: true;
