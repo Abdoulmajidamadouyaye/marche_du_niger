@@ -14,7 +14,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const node_crypto_1 = require("node:crypto");
-const nodemailer_1 = require("nodemailer");
+const nodemailer = require("nodemailer");
 const prisma_service_1 = require("../shared/prisma/prisma.service");
 let AuthService = class AuthService {
     constructor(prisma, configService, jwtService) {
@@ -79,7 +79,7 @@ let AuthService = class AuthService {
                 resetPasswordExpiresAt,
             },
         });
-        const transporter = nodemailer_1.default.createTransport({
+        const transporter = nodemailer.createTransport({
             host: smtpHost,
             port: smtpPort,
             secure: smtpPort === 465,
@@ -212,7 +212,7 @@ let AuthService = class AuthService {
                 resetPasswordExpiresAt,
             },
         });
-        const transporter = nodemailer_1.default.createTransport({
+        const transporter = nodemailer.createTransport({
             host: smtpHost,
             port: smtpPort,
             secure: smtpPort === 465,
