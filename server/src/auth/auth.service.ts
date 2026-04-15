@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../shared/prisma/prisma.service';
 import { AdminForgotPasswordDto } from './dto/admin-forgot-password.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
